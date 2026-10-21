@@ -1,0 +1,32 @@
+@startuml
+' встроенная раскладка: диаграмма рисуется без установленного Graphviz
+!pragma layout smetana
+!include <C4/C4_Component>
+
+title Диаграмма компонентов: сервис телеметрии
+
+Container(gateway, "API Gateway", "Spring Cloud Gateway", "Единая точка входа")
+ContainerDb(telemetryDb, "БД телеметрии", "TimescaleDB", "Показания по времени, список устройств")
+ContainerQueue(kafka, "Брокер событий", "Kafka", "Асинхронные события")
+
+Container_Boundary(svc, "Сервис телеметрии") {
+  Component(api, "API показаний", "Kotlin, Spring MVC, REST", "Отдаёт показания по устройству и периоду")
+  Component(processing, "Обработка показаний", "Kotlin, Spring Service", "Сохраняет показание и публикует «новое показание»")
+  Component(registry, "Справочник устройств", "Kotlin, Spring Service", "Копия списка устройств, собранная из событий")
+  Component(repo, "Репозиторий показаний", "Kotlin, Spring Data JDBC", "Запись и выборка показаний по времени")
+  Component(events, "Kafka-клиент", "Spring Kafka", "Читает показания и события устройств, публикует «новое показание»")
+}
+
+Rel(gateway, api, "Показания", "REST")
+Rel(api, repo, "Выборка показаний")
+Rel(events, processing, "Показания устройств")
+Rel(events, registry, "«Устройство добавлено/удалено»")
+Rel(processing, registry, "Проверяет, что устройство известно")
+Rel(processing, repo, "Сохраняет показание")
+Rel(registry, repo, "Сохраняет список устройств")
+Rel(processing, events, "«Новое показание»")
+Rel(repo, telemetryDb, "Читает и пишет", "SQL")
+Rel(events, kafka, "Читает и публикует", "Kafka, асинхронно")
+
+SHOW_LEGEND()
+@enduml

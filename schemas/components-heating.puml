@@ -1,0 +1,31 @@
+@startuml
+' встроенная раскладка: диаграмма рисуется без установленного Graphviz
+!pragma layout smetana
+!include <C4/C4_Component>
+
+title Диаграмма компонентов: сервис отопления
+
+Container(gateway, "API Gateway", "Spring Cloud Gateway", "Единая точка входа")
+Container(devicesSvc, "Управление устройствами", "Java, Spring Boot", "Выполняет команды устройствам")
+ContainerDb(heatingDb, "БД отопления", "PostgreSQL", "Заданные температуры")
+ContainerQueue(kafka, "Брокер событий", "Kafka", "Асинхронные события")
+
+Container_Boundary(svc, "Сервис отопления") {
+  Component(api, "API отопления", "Spring MVC, REST", "Задать температуру")
+  Component(regulator, "Регулятор температуры", "Spring Service", "Держит заданную температуру, не даёт выставить опасное значение")
+  Component(repo, "Репозиторий отопления", "Spring Data JPA", "Заданные температуры по домам")
+  Component(events, "Kafka-клиент", "Spring Kafka", "Читает «новое показание»")
+  Component(devicesClient, "Клиент управления устройствами", "Spring RestClient", "Отправляет команду включить или выключить")
+}
+
+Rel(gateway, api, "Заданная температура", "REST")
+Rel(api, regulator, "Задать температуру")
+Rel(regulator, repo, "Читает и сохраняет заданную температуру")
+Rel(events, regulator, "«Новое показание»")
+Rel(regulator, devicesClient, "Включить или выключить")
+Rel(devicesClient, devicesSvc, "Команда устройству", "REST, синхронно")
+Rel(repo, heatingDb, "Читает и пишет", "SQL")
+Rel(events, kafka, "Читает", "Kafka, асинхронно")
+
+SHOW_LEGEND()
+@enduml

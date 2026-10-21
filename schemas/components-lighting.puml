@@ -1,0 +1,27 @@
+@startuml
+' встроенная раскладка: диаграмма рисуется без установленного Graphviz
+!pragma layout smetana
+!include <C4/C4_Component>
+
+title Диаграмма компонентов: сервис освещения
+
+Container(gateway, "API Gateway", "Spring Cloud Gateway", "Единая точка входа")
+Container(devicesSvc, "Управление устройствами", "Java, Spring Boot", "Выполняет команды устройствам")
+ContainerDb(lightingDb, "БД освещения", "PostgreSQL", "Группы ламп и настройки")
+
+Container_Boundary(svc, "Сервис освещения") {
+  Component(api, "API освещения", "Spring MVC, REST", "Группы ламп и яркость")
+  Component(groups, "Группы ламп и яркость", "Spring Service", "Объединяет лампы по комнатам, управляет яркостью группы")
+  Component(repo, "Репозиторий освещения", "Spring Data JPA", "Группы ламп и настройки")
+  Component(devicesClient, "Клиент управления устройствами", "Spring RestClient", "Отправляет команды лампам")
+}
+
+Rel(gateway, api, "Группы, яркость", "REST")
+Rel(api, groups, "Изменить группу или яркость")
+Rel(groups, repo, "Читает и сохраняет")
+Rel(groups, devicesClient, "Команды лампам группы")
+Rel(devicesClient, devicesSvc, "Команда устройству", "REST, синхронно")
+Rel(repo, lightingDb, "Читает и пишет", "SQL")
+
+SHOW_LEGEND()
+@enduml

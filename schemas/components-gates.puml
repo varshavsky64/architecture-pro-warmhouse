@@ -1,0 +1,31 @@
+@startuml
+' встроенная раскладка: диаграмма рисуется без установленного Graphviz
+!pragma layout smetana
+!include <C4/C4_Component>
+
+title Диаграмма компонентов: сервис ворот
+
+Container(gateway, "API Gateway", "Spring Cloud Gateway", "Единая точка входа")
+Container(devicesSvc, "Управление устройствами", "Java, Spring Boot", "Выполняет команды устройствам")
+ContainerDb(gatesDb, "БД ворот", "PostgreSQL", "Права доступа, таймеры")
+
+Container_Boundary(svc, "Сервис ворот") {
+  Component(api, "API ворот", "Spring MVC, REST", "Открыть, закрыть, права доступа")
+  Component(access, "Контроль доступа", "Spring Service", "Проверяет, кто имеет право открывать")
+  Component(autoClose, "Автозакрытие", "Spring Service", "Закрывает ворота по таймеру")
+  Component(repo, "Репозиторий ворот", "Spring Data JPA", "Права доступа и таймеры")
+  Component(devicesClient, "Клиент управления устройствами", "Spring RestClient", "Отправляет команду открыть или закрыть")
+}
+
+Rel(gateway, api, "Открыть, закрыть", "REST")
+Rel(api, access, "Открыть ворота")
+Rel(access, repo, "Читает права доступа")
+Rel(access, devicesClient, "Открыть")
+Rel(access, autoClose, "Запустить таймер")
+Rel(autoClose, repo, "Читает настройки таймера")
+Rel(autoClose, devicesClient, "Закрыть")
+Rel(devicesClient, devicesSvc, "Команда устройству", "REST, синхронно")
+Rel(repo, gatesDb, "Читает и пишет", "SQL")
+
+SHOW_LEGEND()
+@enduml

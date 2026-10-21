@@ -1,0 +1,33 @@
+@startuml
+' встроенная раскладка: диаграмма рисуется без установленного Graphviz
+!pragma layout smetana
+!include <C4/C4_Component>
+
+title Диаграмма компонентов: сервис видеонаблюдения
+
+Container(gateway, "API Gateway", "Spring Cloud Gateway", "Единая точка входа")
+ContainerDb(videoStore, "Хранилище видео", "MinIO, S3", "Записи с камер")
+ContainerQueue(kafka, "Брокер событий", "Kafka", "Асинхронные события")
+System_Ext(cameras, "Камеры партнёров", "IP-камеры")
+
+Container_Boundary(svc, "Сервис видеонаблюдения") {
+  Component(api, "API видео", "Spring MVC, REST, HLS", "Живое видео и записи")
+  Component(ingest, "Приём видеопотоков", "Spring Service", "Забирает поток с каждой камеры")
+  Component(records, "Записи", "Spring Service", "Сохраняет фрагменты видео и отдаёт их пользователю")
+  Component(cameraRegistry, "Справочник камер", "Spring Service", "Копия списка камер, собранная из событий")
+  Component(events, "Kafka-клиент", "Spring Kafka", "Читает события о камерах")
+  Component(storage, "Клиент хранилища", "MinIO SDK", "Пишет и читает файлы записей")
+}
+
+Rel(gateway, api, "Просмотр видео", "REST, HLS")
+Rel(api, records, "Живой поток и записи")
+Rel(events, cameraRegistry, "События о камерах")
+Rel(ingest, cameraRegistry, "Какие камеры опрашивать")
+Rel(ingest, cameras, "Забирает видеопоток", "RTSP")
+Rel(ingest, records, "Фрагменты видео")
+Rel(records, storage, "Сохраняет и читает записи")
+Rel(storage, videoStore, "Читает и пишет", "S3 API")
+Rel(events, kafka, "Читает", "Kafka, асинхронно")
+
+SHOW_LEGEND()
+@enduml

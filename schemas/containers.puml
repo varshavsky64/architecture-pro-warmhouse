@@ -1,0 +1,76 @@
+@startuml
+' встроенная раскладка: диаграмма рисуется без установленного Graphviz
+!pragma layout smetana
+!include <C4/C4_Container>
+
+title Диаграмма контейнеров: целевая система «Тёплый дом»
+
+Person(user, "Пользователь", "Владелец дома")
+
+System_Boundary(eco, "Экосистема «Тёплый дом»") {
+  Container(web, "Веб-приложение", "SPA", "Интерфейс пользователя в браузере")
+  Container(gateway, "API Gateway", "Spring Cloud Gateway", "Единая точка входа, направляет запросы в сервисы")
+
+  Container(users, "Пользователи и подписки", "Java, Spring Boot", "Пользователи, их дома и подписки")
+  Container(devicesSvc, "Управление устройствами", "Java, Spring Boot", "Подключение устройств, протоколы партнёров, простые команды для любого типа")
+  Container(telemetry, "Телеметрия", "Kotlin, Spring Boot", "Собирает и хранит показания, сообщает о новых")
+  Container(scenarios, "Сценарии", "Java, Spring Boot", "Правила пользователя: при выполнении условия отправляет команду")
+  Container(heating, "Отопление", "Java, Spring Boot", "Держит заданную температуру, не даёт выставить опасное значение")
+  Container(lighting, "Освещение", "Java, Spring Boot", "Группы ламп по комнатам, яркость")
+  Container(gates, "Ворота", "Java, Spring Boot", "Права на открытие, автозакрытие по таймеру")
+  Container(video, "Видеонаблюдение", "Java, Spring Boot", "Принимает видео с камер, хранит записи, отдаёт видео пользователю")
+
+  ContainerDb(usersDb, "БД пользователей", "PostgreSQL", "Пользователи, дома, подписки")
+  ContainerDb(devicesDb, "БД устройств", "PostgreSQL", "Устройства, модули, типы, привязка к дому")
+  ContainerDb(telemetryDb, "БД телеметрии", "TimescaleDB", "Показания по времени")
+  ContainerDb(scenariosDb, "БД сценариев", "PostgreSQL", "Сценарии и условия")
+  ContainerDb(heatingDb, "БД отопления", "PostgreSQL", "Заданные температуры")
+  ContainerDb(lightingDb, "БД освещения", "PostgreSQL", "Группы ламп и настройки")
+  ContainerDb(gatesDb, "БД ворот", "PostgreSQL", "Права доступа, таймеры")
+  ContainerDb(videoStore, "Хранилище видео", "MinIO, S3", "Записи с камер")
+
+  ContainerQueue(kafka, "Брокер событий", "Kafka", "Асинхронные события между сервисами")
+  ContainerQueue(mqtt, "MQTT-брокер", "Eclipse Mosquitto", "Показания и команды устройств")
+}
+
+System_Ext(devices, "Устройства партнёров", "Датчики, реле, модули отопления, освещения и ворот")
+System_Ext(cameras, "Камеры партнёров", "IP-камеры")
+
+Rel(user, web, "Пользуется", "HTTPS")
+Rel(web, gateway, "Вызывает API", "REST/HTTPS, JSON")
+
+Rel(gateway, users, "Аккаунт, дома, подписка", "REST")
+Rel(gateway, devicesSvc, "Подключение, команды", "REST")
+Rel(gateway, telemetry, "Показания", "REST")
+Rel(gateway, scenarios, "Настройка сценариев", "REST")
+Rel(gateway, heating, "Заданная температура", "REST")
+Rel(gateway, lighting, "Группы, яркость", "REST")
+Rel(gateway, gates, "Открыть, закрыть", "REST")
+Rel(gateway, video, "Просмотр видео", "REST, HLS")
+
+Rel(devicesSvc, users, "Проверяет дом и подписку", "REST, синхронно")
+Rel(heating, devicesSvc, "Команда устройству", "REST, синхронно")
+Rel(lighting, devicesSvc, "Команда устройству", "REST, синхронно")
+Rel(gates, devicesSvc, "Команда устройству", "REST, синхронно")
+
+Rel(devicesSvc, kafka, "Публикует показания и «устройство добавлено/удалено»; читает команды сценариев", "Kafka, асинхронно")
+Rel(telemetry, kafka, "Читает показания и события устройств; публикует «новое показание»", "Kafka, асинхронно")
+Rel(scenarios, kafka, "Читает «новое показание»; публикует команды", "Kafka, асинхронно")
+Rel(heating, kafka, "Читает «новое показание»", "Kafka, асинхронно")
+Rel(video, kafka, "Читает события о камерах", "Kafka, асинхронно")
+
+Rel(users, usersDb, "Читает и пишет", "SQL")
+Rel(devicesSvc, devicesDb, "Читает и пишет", "SQL")
+Rel(telemetry, telemetryDb, "Читает и пишет", "SQL")
+Rel(scenarios, scenariosDb, "Читает и пишет", "SQL")
+Rel(heating, heatingDb, "Читает и пишет", "SQL")
+Rel(lighting, lightingDb, "Читает и пишет", "SQL")
+Rel(gates, gatesDb, "Читает и пишет", "SQL")
+Rel(video, videoStore, "Сохраняет и читает записи", "S3 API")
+
+Rel(devicesSvc, mqtt, "Отправляет команды, получает показания", "MQTT")
+Rel(devices, mqtt, "Публикуют показания, получают команды", "MQTT")
+Rel(video, cameras, "Забирает видеопоток", "RTSP")
+
+SHOW_LEGEND()
+@enduml

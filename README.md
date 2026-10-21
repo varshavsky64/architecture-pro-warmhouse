@@ -88,15 +88,35 @@
 
 **Диаграмма контейнеров (Containers)**
 
-Добавьте диаграмму.
+![Диаграмма контейнеров](schemas/containers.png)
+
+Исходник диаграммы: [schemas/containers.puml](schemas/containers.puml)
 
 **Диаграмма компонентов (Components)**
 
-Добавьте диаграмму для каждого из выделенных микросервисов.
+![Компоненты: управление устройствами](schemas/components-devices.png)
+
+![Компоненты: телеметрия](schemas/components-telemetry.png)
+
+![Компоненты: пользователи и подписки](schemas/components-users.png)
+
+![Компоненты: сценарии](schemas/components-scenarios.png)
+
+![Компоненты: отопление](schemas/components-heating.png)
+
+![Компоненты: освещение](schemas/components-lighting.png)
+
+![Компоненты: ворота](schemas/components-gates.png)
+
+![Компоненты: видеонаблюдение](schemas/components-video.png)
+
+Исходники диаграмм лежат в папке [schemas](schemas), файлы `components-*.puml`.
 
 **Диаграмма кода (Code)**
 
-Добавьте одну диаграмму или несколько.
+![Диаграмма кода: компонент «Команды»](schemas/code-commands.png)
+
+Исходник диаграммы: [schemas/code-commands.puml](schemas/code-commands.puml)
 
 # Задание 3. Разработка ER-диаграммы
 

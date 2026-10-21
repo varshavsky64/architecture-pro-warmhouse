@@ -1,0 +1,28 @@
+@startuml
+' встроенная раскладка: диаграмма рисуется без установленного Graphviz
+!pragma layout smetana
+!include <C4/C4_Component>
+
+title Диаграмма компонентов: сервис пользователей и подписок
+
+Container(gateway, "API Gateway", "Spring Cloud Gateway", "Единая точка входа")
+Container(devicesSvc, "Управление устройствами", "Java, Spring Boot", "Подключает устройства")
+ContainerDb(usersDb, "БД пользователей", "PostgreSQL", "Пользователи, дома, подписки")
+
+Container_Boundary(svc, "Сервис пользователей и подписок") {
+  Component(api, "API пользователей", "Spring MVC, REST", "Аккаунт, дома, подписка")
+  Component(usersHomes, "Пользователи и дома", "Spring Service", "Регистрирует пользователя и его дома")
+  Component(subs, "Подписки", "Spring Service", "Оформляет подписку и отвечает, активна ли она")
+  Component(repo, "Репозиторий пользователей", "Spring Data JPA", "Пользователи, дома, подписки")
+}
+
+Rel(gateway, api, "Аккаунт, дома, подписка", "REST")
+Rel(devicesSvc, api, "Чей дом, активна ли подписка", "REST, синхронно")
+Rel(api, usersHomes, "Пользователь и его дома")
+Rel(api, subs, "Подписка")
+Rel(usersHomes, repo, "Читает и сохраняет")
+Rel(subs, repo, "Читает и сохраняет")
+Rel(repo, usersDb, "Читает и пишет", "SQL")
+
+SHOW_LEGEND()
+@enduml

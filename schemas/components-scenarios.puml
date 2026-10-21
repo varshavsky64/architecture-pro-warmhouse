@@ -1,0 +1,30 @@
+@startuml
+' встроенная раскладка: диаграмма рисуется без установленного Graphviz
+!pragma layout smetana
+!include <C4/C4_Component>
+
+title Диаграмма компонентов: сервис сценариев
+
+Container(gateway, "API Gateway", "Spring Cloud Gateway", "Единая точка входа")
+ContainerDb(scenariosDb, "БД сценариев", "PostgreSQL", "Сценарии и условия")
+ContainerQueue(kafka, "Брокер событий", "Kafka", "Асинхронные события")
+
+Container_Boundary(svc, "Сервис сценариев") {
+  Component(api, "API сценариев", "Spring MVC, REST", "Создание и изменение сценариев")
+  Component(manage, "Управление сценариями", "Spring Service", "Создаёт, изменяет, включает и выключает сценарии")
+  Component(engine, "Движок сценариев", "Spring Service", "На каждое новое показание проверяет условия и формирует команды")
+  Component(repo, "Репозиторий сценариев", "Spring Data JPA", "Сценарии и условия")
+  Component(events, "Kafka-клиент", "Spring Kafka", "Читает «новое показание», публикует команды")
+}
+
+Rel(gateway, api, "Настройка сценариев", "REST")
+Rel(api, manage, "Создать или изменить сценарий")
+Rel(manage, repo, "Сохраняет сценарий")
+Rel(events, engine, "«Новое показание»")
+Rel(engine, repo, "Ищет сценарии с подходящим условием")
+Rel(engine, events, "Команда устройству")
+Rel(repo, scenariosDb, "Читает и пишет", "SQL")
+Rel(events, kafka, "Читает и публикует", "Kafka, асинхронно")
+
+SHOW_LEGEND()
+@enduml
