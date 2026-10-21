@@ -1,0 +1,125 @@
+openapi: 3.0.3
+info:
+  title: Сервис телеметрии
+  version: 1.0.0
+  description: >-
+    История показаний устройств. Показания приходят от устройств
+    через сервис управления устройствами, сервис телеметрии их хранит.
+servers:
+  - url: http://localhost:8083
+    description: Локальный запуск сервиса
+paths:
+  /telemetry:
+    get:
+      operationId: getReadings
+      summary: Показания устройства за период
+      parameters:
+        - name: deviceId
+          in: query
+          required: true
+          description: Идентификатор устройства
+          schema:
+            type: string
+            format: uuid
+          example: 5b8d2f4a-6c1e-4a3b-9d7f-0e2c4a6b8d10
+        - name: from
+          in: query
+          required: true
+          description: Начало периода
+          schema:
+            type: string
+            format: date-time
+          example: '2026-10-21T10:00:00Z'
+        - name: to
+          in: query
+          required: true
+          description: Конец периода
+          schema:
+            type: string
+            format: date-time
+          example: '2026-10-21T11:00:00Z'
+      responses:
+        '200':
+          description: Показания за период по возрастанию времени
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TelemetryData'
+              examples:
+                temperature:
+                  summary: Температура с термостата за час
+                  value:
+                    - id: 0c3f5a7b-9d1e-4f2a-8b6c-1e3a5c7e9f20
+                      deviceId: 5b8d2f4a-6c1e-4a3b-9d7f-0e2c4a6b8d10
+                      value: 21.5
+                      recordedAt: '2026-10-21T10:00:00Z'
+                    - id: 1d4a6b8c-0e2f-4a3b-9c7d-2f4b6d8f0a31
+                      deviceId: 5b8d2f4a-6c1e-4a3b-9d7f-0e2c4a6b8d10
+                      value: 21.8
+                      recordedAt: '2026-10-21T10:30:00Z'
+                empty:
+                  summary: За период показаний нет
+                  value: []
+        '400':
+          description: Неверный период
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidPeriod:
+                  summary: Начало периода позже конца
+                  value:
+                    code: INVALID_PERIOD
+                    message: Начало периода позже конца
+        '404':
+          description: Устройство не найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                notFound:
+                  summary: Нет устройства с таким id
+                  value:
+                    code: DEVICE_NOT_FOUND
+                    message: Устройство 5b8d2f4a-6c1e-4a3b-9d7f-0e2c4a6b8d10 не найдено
+components:
+  schemas:
+    TelemetryData:
+      type: object
+      required:
+        - id
+        - deviceId
+        - value
+        - recordedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Идентификатор показания
+        deviceId:
+          type: string
+          format: uuid
+          description: Устройство, от которого пришло показание
+        value:
+          type: number
+          description: Значение показания
+        recordedAt:
+          type: string
+          format: date-time
+          description: Время показания
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Код ошибки для программ
+        message:
+          type: string
+          description: Описание ошибки для человека

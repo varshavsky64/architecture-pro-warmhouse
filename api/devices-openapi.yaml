@@ -1,0 +1,291 @@
+openapi: 3.0.3
+info:
+  title: Сервис управления устройствами
+  version: 1.0.0
+  description: >-
+    Подключение устройств к дому и команды устройствам.
+    Запросы пользователей приходят через API Gateway: он проверяет токен
+    и передаёт идентификатор пользователя в заголовке X-User-Id.
+servers:
+  - url: http://localhost:8082
+    description: Локальный запуск сервиса
+paths:
+  /devices:
+    post:
+      operationId: connectDevice
+      summary: Подключить устройство к дому
+      description: >-
+        Пользователь сам подключает устройство к своему дому. Сервис спрашивает
+        у сервиса пользователей и подписок, чей это дом и активна ли подписка.
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectDeviceRequest'
+            examples:
+              thermostat:
+                summary: Подключить термостат
+                value:
+                  houseId: 3f1c2a9e-7b4d-4c8a-9e21-5d6f7a8b9c01
+                  typeId: 9a7e5c3b-1d2f-4e6a-8b0c-2d4f6a8c0e11
+                  serialNumber: TH-2024-000142
+      responses:
+        '201':
+          description: Устройство подключено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+              examples:
+                connected:
+                  summary: Термостат подключён и пока выключен
+                  value:
+                    id: 5b8d2f4a-6c1e-4a3b-9d7f-0e2c4a6b8d10
+                    typeId: 9a7e5c3b-1d2f-4e6a-8b0c-2d4f6a8c0e11
+                    houseId: 3f1c2a9e-7b4d-4c8a-9e21-5d6f7a8b9c01
+                    serialNumber: TH-2024-000142
+                    status: 'OFF'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                unknownType:
+                  summary: Неизвестный тип устройства
+                  value:
+                    code: UNKNOWN_DEVICE_TYPE
+                    message: Тип устройства 9a7e5c3b-1d2f-4e6a-8b0c-2d4f6a8c0e11 не найден
+                missingSerialNumber:
+                  summary: Не указан серийный номер
+                  value:
+                    code: VALIDATION_ERROR
+                    message: Поле serialNumber обязательно
+        '403':
+          description: Дом принадлежит другому пользователю или подписка не активна
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                foreignHouse:
+                  summary: Чужой дом
+                  value:
+                    code: HOUSE_NOT_OWNED
+                    message: Дом принадлежит другому пользователю
+                inactiveSubscription:
+                  summary: Подписка не активна
+                  value:
+                    code: SUBSCRIPTION_INACTIVE
+                    message: Подписка пользователя не активна
+        '409':
+          description: Устройство с таким серийным номером уже подключено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                alreadyConnected:
+                  summary: Повторное подключение
+                  value:
+                    code: DEVICE_ALREADY_CONNECTED
+                    message: Устройство с серийным номером TH-2024-000142 уже подключено
+  /devices/{id}:
+    get:
+      operationId: getDevice
+      summary: Получить устройство и его состояние
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+      responses:
+        '200':
+          description: Устройство найдено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+              examples:
+                thermostatOn:
+                  summary: Термостат включён
+                  value:
+                    id: 5b8d2f4a-6c1e-4a3b-9d7f-0e2c4a6b8d10
+                    typeId: 9a7e5c3b-1d2f-4e6a-8b0c-2d4f6a8c0e11
+                    houseId: 3f1c2a9e-7b4d-4c8a-9e21-5d6f7a8b9c01
+                    serialNumber: TH-2024-000142
+                    status: 'ON'
+        '404':
+          $ref: '#/components/responses/DeviceNotFound'
+  /devices/{id}/commands:
+    post:
+      operationId: sendCommand
+      summary: Отправить команду устройству
+      description: >-
+        Сервис проверяет, что тип устройства поддерживает команду
+        (список supported_commands), отправляет её устройству
+        и возвращает новое состояние устройства.
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Command'
+            examples:
+              turnOn:
+                summary: Включить отопление
+                value:
+                  action: TURN_ON
+              setTemperature:
+                summary: Задать температуру 22 °C
+                value:
+                  action: SET_TEMPERATURE
+                  params:
+                    value: '22'
+      responses:
+        '200':
+          description: Команда выполнена, в ответе новое состояние устройства
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceState'
+              examples:
+                turnedOn:
+                  summary: Отопление включено
+                  value:
+                    status: 'ON'
+                    updatedAt: '2026-10-21T10:15:00Z'
+        '400':
+          description: Тип устройства не поддерживает команду
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                notSupported:
+                  summary: Команда ворот отправлена термостату
+                  value:
+                    code: COMMAND_NOT_SUPPORTED
+                    message: Тип устройства «Термостат» не поддерживает команду OPEN
+        '404':
+          $ref: '#/components/responses/DeviceNotFound'
+components:
+  parameters:
+    UserId:
+      name: X-User-Id
+      in: header
+      required: true
+      description: Идентификатор пользователя. Его передаёт API Gateway после проверки токена
+      schema:
+        type: string
+        format: uuid
+      example: 7c9e6679-7425-40de-944b-e07fc1f90ae7
+    DeviceId:
+      name: id
+      in: path
+      required: true
+      description: Идентификатор устройства
+      schema:
+        type: string
+        format: uuid
+      example: 5b8d2f4a-6c1e-4a3b-9d7f-0e2c4a6b8d10
+  responses:
+    DeviceNotFound:
+      description: Устройство не найдено
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          examples:
+            notFound:
+              summary: Нет устройства с таким id
+              value:
+                code: DEVICE_NOT_FOUND
+                message: Устройство 5b8d2f4a-6c1e-4a3b-9d7f-0e2c4a6b8d10 не найдено
+  schemas:
+    ConnectDeviceRequest:
+      type: object
+      required:
+        - houseId
+        - typeId
+        - serialNumber
+      properties:
+        houseId:
+          type: string
+          format: uuid
+          description: Дом, к которому подключают устройство
+        typeId:
+          type: string
+          format: uuid
+          description: Тип устройства
+        serialNumber:
+          type: string
+          description: Серийный номер с корпуса или упаковки устройства
+    Device:
+      type: object
+      required:
+        - id
+        - typeId
+        - houseId
+        - serialNumber
+        - status
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Идентификатор устройства
+        typeId:
+          type: string
+          format: uuid
+          description: Тип устройства
+        houseId:
+          type: string
+          format: uuid
+          description: Дом, к которому подключено устройство
+        serialNumber:
+          type: string
+          description: Серийный номер устройства
+        status:
+          type: string
+          description: Текущее состояние устройства, например ON или OFF
+    Command:
+      type: object
+      required:
+        - action
+      properties:
+        action:
+          type: string
+          description: Команда из списка supported_commands типа устройства
+        params:
+          type: object
+          additionalProperties:
+            type: string
+          description: Параметры команды, например целевая температура
+    DeviceState:
+      type: object
+      required:
+        - status
+        - updatedAt
+      properties:
+        status:
+          type: string
+          description: Новое состояние устройства
+        updatedAt:
+          type: string
+          format: date-time
+          description: Когда состояние изменилось
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          description: Код ошибки для программ
+        message:
+          type: string
+          description: Описание ошибки для человека
