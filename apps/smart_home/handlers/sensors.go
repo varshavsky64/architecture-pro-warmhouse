@@ -18,13 +18,15 @@ import (
 type SensorHandler struct {
 	DB                 *db.DB
 	TemperatureService *services.TemperatureService
+	DevicesService     *services.DevicesService
 }
 
 // NewSensorHandler creates a new SensorHandler
-func NewSensorHandler(db *db.DB, temperatureService *services.TemperatureService) *SensorHandler {
+func NewSensorHandler(db *db.DB, temperatureService *services.TemperatureService, devicesService *services.DevicesService) *SensorHandler {
 	return &SensorHandler{
 		DB:                 db,
 		TemperatureService: temperatureService,
+		DevicesService:     devicesService,
 	}
 }
 
@@ -140,6 +142,17 @@ func (h *SensorHandler) CreateSensor(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
+	}
+
+	// Register the new sensor in the devices microservice, which collects its telemetry.
+	// The monolith stays the source of truth for sensors, so a failure is only logged.
+	if sensor.Type == models.Temperature {
+		deviceID, err := h.DevicesService.RegisterSensor(sensor.ID)
+		if err == nil {
+			log.Printf("Sensor %d registered in devices service as device %s", sensor.ID, deviceID)
+		} else {
+			log.Printf("Failed to register sensor %d in devices service: %v", sensor.ID, err)
+		}
 	}
 
 	c.JSON(http.StatusCreated, sensor)
