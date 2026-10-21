@@ -13,7 +13,7 @@ Container_Boundary(svc, "Сервис телеметрии") {
   Component(api, "API показаний", "Kotlin, Spring MVC, REST", "Отдаёт показания по устройству и периоду")
   Component(processing, "Обработка показаний", "Kotlin, Spring Service", "Сохраняет показание и публикует «новое показание»")
   Component(registry, "Справочник устройств", "Kotlin, Spring Service", "Копия списка устройств, собранная из событий")
-  Component(repo, "Репозиторий показаний", "Kotlin, Spring Data JDBC", "Запись и выборка показаний по времени")
+  Component(repo, "Репозиторий показаний", "Kotlin, Spring JDBC", "Запись и выборка показаний по времени")
   Component(events, "Kafka-клиент", "Spring Kafka", "Читает показания и события устройств, публикует «новое показание»")
 }
 
