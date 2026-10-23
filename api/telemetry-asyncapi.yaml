@@ -1,0 +1,69 @@
+asyncapi: 3.0.0
+info:
+  title: События сервиса телеметрии
+  version: 1.0.0
+  description: >-
+    Сервис телеметрии сообщает о каждом новом показании устройства.
+    Событие читает сервис сценариев, чтобы проверить условия сценариев.
+defaultContentType: application/json
+servers:
+  kafka:
+    host: localhost:9092
+    protocol: kafka
+    description: Брокер событий Kafka
+channels:
+  readings:
+    address: telemetry.readings
+    description: Новые показания устройств
+    messages:
+      newReading:
+        $ref: '#/components/messages/NewReading'
+operations:
+  publishNewReading:
+    action: send
+    channel:
+      $ref: '#/channels/readings'
+    summary: Телеметрия публикует новое показание
+    messages:
+      - $ref: '#/channels/readings/messages/newReading'
+components:
+  messages:
+    NewReading:
+      name: NewReading
+      title: Новое показание
+      summary: Устройство передало новое показание
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/NewReading'
+      examples:
+        - name: thermostatTemperature
+          summary: Температура с термостата
+          payload:
+            id: 2e5b7c9d-1f3a-4b4c-8d8e-3a5c7e9a1b42
+            deviceId: 5b8d2f4a-6c1e-4a3b-9d7f-0e2c4a6b8d10
+            value: 21.8
+            recordedAt: '2026-10-21T10:30:00Z'
+  schemas:
+    NewReading:
+      type: object
+      required:
+        - id
+        - deviceId
+        - value
+        - recordedAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Идентификатор показания
+        deviceId:
+          type: string
+          format: uuid
+          description: Устройство, от которого пришло показание
+        value:
+          type: number
+          description: Значение показания
+        recordedAt:
+          type: string
+          format: date-time
+          description: Время показания

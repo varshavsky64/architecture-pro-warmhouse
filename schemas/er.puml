@@ -1,0 +1,63 @@
+@startuml
+' встроенная раскладка: диаграмма рисуется без установленного Graphviz
+!pragma layout smetana
+
+title ER-диаграмма экосистемы «Тёплый дом»
+
+hide circle
+
+entity "Пользователь (User)" as user {
+  id : UUID <<PK>>
+  --
+  name : VARCHAR
+  email : VARCHAR
+  subscription_status : VARCHAR
+}
+
+entity "Дом (House)" as house {
+  id : UUID <<PK>>
+  --
+  user_id : UUID <<FK>>
+  name : VARCHAR
+  address : VARCHAR
+}
+
+entity "Тип устройства (DeviceType)" as deviceType {
+  id : UUID <<PK>>
+  --
+  name : VARCHAR
+  supported_commands : TEXT[]
+}
+
+entity "Устройство (Device)" as device {
+  id : UUID <<PK>>
+  --
+  type_id : UUID <<FK>>
+  house_id : UUID <<FK>>
+  serial_number : VARCHAR
+  status : VARCHAR
+}
+
+entity "Модуль (Module)" as module {
+  id : UUID <<PK>>
+  --
+  device_id : UUID <<FK>>
+  name : VARCHAR
+  serial_number : VARCHAR
+}
+
+entity "Телеметрия (TelemetryData)" as telemetry {
+  id : UUID <<PK>>
+  --
+  device_id : UUID <<FK>>
+  value : NUMERIC
+  recorded_at : TIMESTAMP
+}
+
+user ||--o{ house : владеет
+house ||--o{ device : содержит
+deviceType ||--o{ device : задаёт тип
+device ||--|{ module : состоит из
+device ||--o{ telemetry : генерирует
+
+@enduml

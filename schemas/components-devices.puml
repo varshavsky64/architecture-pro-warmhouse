@@ -1,0 +1,44 @@
+@startuml
+' встроенная раскладка: диаграмма рисуется без установленного Graphviz
+!pragma layout smetana
+!include <C4/C4_Component>
+
+title Диаграмма компонентов: сервис управления устройствами
+
+Container(gateway, "API Gateway", "Spring Cloud Gateway", "Единая точка входа")
+Container(typeSvcs, "Отопление, освещение, ворота", "Java, Spring Boot", "Сервисы типов устройств")
+Container(usersSvc, "Пользователи и подписки", "Java, Spring Boot", "Дома и подписки")
+ContainerDb(devicesDb, "БД устройств", "PostgreSQL", "Устройства, модули, типы, привязка к дому")
+ContainerQueue(kafka, "Брокер событий", "Kafka", "Асинхронные события")
+ContainerQueue(mqtt, "MQTT-брокер", "Eclipse Mosquitto", "Показания и команды устройств")
+
+Container_Boundary(svc, "Сервис управления устройствами") {
+  Component(api, "API устройств", "Spring MVC, REST", "Подключение устройств и команды")
+  Component(connection, "Подключение устройств", "Spring Service", "Регистрирует устройство и модуль, определяет тип, привязывает к дому")
+  Component(commands, "Команды", "Spring Service", "Выполняет команды и ведёт состояние устройства")
+  Component(adapter, "Адаптер протоколов партнёров", "Spring Service", "Переводит команды и показания между форматом системы и протоколами устройств")
+  Component(repo, "Репозиторий устройств", "Spring Data JPA", "Устройства, модули, типы, состояния")
+  Component(usersClient, "Клиент пользователей и подписок", "Spring RestClient", "Проверяет дом и подписку")
+  Component(events, "Kafka-клиент", "Spring Kafka", "Публикует показания и «устройство добавлено/удалено», читает команды сценариев")
+  Component(mqttClient, "MQTT-клиент", "Eclipse Paho", "Отправляет команды, получает показания")
+}
+
+Rel(gateway, api, "Подключение, команды", "REST")
+Rel(typeSvcs, api, "Команда устройству", "REST, синхронно")
+Rel(api, connection, "Подключить устройство")
+Rel(api, commands, "Выполнить команду")
+Rel(connection, usersClient, "Проверить дом и подписку")
+Rel(usersClient, usersSvc, "Чей дом, активна ли подписка", "REST, синхронно")
+Rel(connection, repo, "Сохраняет устройство")
+Rel(connection, events, "«Устройство добавлено/удалено»")
+Rel(events, commands, "Команды сценариев")
+Rel(commands, repo, "Читает и обновляет состояние")
+Rel(commands, adapter, "Команда в формате системы")
+Rel(adapter, mqttClient, "Команда в протоколе устройства; получает показания")
+Rel(adapter, events, "Показания в формате системы")
+Rel(repo, devicesDb, "Читает и пишет", "SQL")
+Rel(events, kafka, "Публикует и читает", "Kafka, асинхронно")
+Rel(mqttClient, mqtt, "Команды и показания", "MQTT")
+
+SHOW_LEGEND()
+@enduml

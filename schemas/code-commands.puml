@@ -1,0 +1,68 @@
+@startuml
+' встроенная раскладка: диаграмма рисуется без установленного Graphviz
+!pragma layout smetana
+
+title Диаграмма кода: компонент «Команды» сервиса управления устройствами
+
+skinparam classAttributeIconSize 0
+hide empty members
+
+class CommandService <<сервис>> {
+  + execute(deviceId: UUID, command: Command): DeviceState
+}
+
+class Device <<сущность, корень агрегата>> {
+  - id: UUID
+  - typeId: UUID
+  - houseId: UUID
+  - serialNumber: String
+  - state: DeviceState
+  + apply(command: Command): DeviceState
+}
+
+class DeviceType <<сущность>> {
+  - id: UUID
+  - name: String
+  - supportedCommands: Set<String>
+  + supports(action: String): boolean
+}
+
+class Command <<объект-значение>> {
+  - action: String
+  - params: Map<String, String>
+}
+
+class DeviceState <<объект-значение>> {
+  - status: String
+  - updatedAt: Instant
+}
+
+interface DeviceRepository <<репозиторий>> {
+  + findById(id: UUID): Device
+  + save(device: Device): void
+}
+
+interface ProtocolAdapter <<интерфейс>> {
+  + send(device: Device, command: Command): void
+}
+
+class MqttProtocolAdapter <<адаптер>> {
+  + send(device: Device, command: Command): void
+}
+
+CommandService --> DeviceRepository : загружает и сохраняет устройство
+CommandService --> ProtocolAdapter : отправляет команду устройству
+CommandService ..> Command : принимает
+DeviceRepository ..> Device : хранит
+Device --> "1" DeviceType : тип
+Device *-- "1" DeviceState : состояние
+Device ..> Command : применяет
+MqttProtocolAdapter ..|> ProtocolAdapter
+
+note right of DeviceType
+  Новый тип устройства — это новая запись
+  со своим списком supportedCommands,
+  а не новый код
+end note
+
+@enduml
